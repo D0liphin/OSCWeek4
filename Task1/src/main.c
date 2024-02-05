@@ -181,6 +181,15 @@ void *philosopher_routine(struct philosopher *this)
         return NULL;
 }
 
+/**
+ * This is like doing 
+ * 
+ * ```java
+ * var thread = new Thread(philosopher);
+ * thread.start();
+ * return thread;
+ * ```
+ */
 pthread_t philosopher_start(struct philosopher *restrict this)
 {
         pthread_t thread;
