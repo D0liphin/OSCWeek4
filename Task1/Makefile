@@ -14,6 +14,8 @@ SRC_EXTS=c
 STD=gnu11
 # sanitizers to use (undefined, address, thread, memory, leak, pointer)
 FSANITIZERS=
+# the compiler to be used
+CC=clang-17
 # *************************************************************************** #
 
 # some ANSI escape codes
@@ -22,8 +24,6 @@ RED=\033[0;31m
 BOLD=\033[1m
 RESET=\033[0m
 
-# the compiler to be used
-CC=clang-17
 # sanitizers to be used
 FSANITIZE_FLAGS=$(foreach sanitizer,$(FSANITIZERS),-fsanitize=$(sanitizer))
 # flags for compiling translation units
