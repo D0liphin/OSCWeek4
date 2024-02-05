@@ -48,3 +48,6 @@ If you're on Linux, you probably already have Make.
 
 If you're on Windows, I don't know how to install Make. Looks like you 
 have to install it manually [from here](https://gnuwin32.sourceforge.net/packages/make.htm).
+
+If you're on some other esoteric operating system (like MacOS) you
+ought to figure it out for yourself.
