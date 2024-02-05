@@ -13,7 +13,7 @@ SRC_EXTS=c
 # the C++ standard to use
 STD=gnu11
 # sanitizers to use (undefined, address, thread, memory, leak, pointer)
-FSANITIZERS=
+FSANITIZERS=undefined address
 # the compiler to be used
 CC=clang-17
 # *************************************************************************** #
