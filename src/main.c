@@ -46,27 +46,52 @@ struct timespec timespec_from_ms(long ms)
         return timespec;
 }
 
+/**
+ * I wonder what this function does... 
+ * 
+ * Note that unlike Java, this function panics on interrupt. 
+ */
 void millisleep(long ms)
 {
         struct timespec ts = timespec_from_ms(ms);
         if (nanosleep(&ts, NULL) != 0) {
-                // This shouldn't be EINVAL and is unlikely to be EFAULT, so it 
-                // probably just means we got interrupted (which is also very 
+                // This shouldn't be EINVAL and is unlikely to be EFAULT, so it
+                // probably just means we got interrupted (which is also very
                 // unlikely).
-                PANIC("nanosleep() errored with %d", errno);
+                PANIC("nanosleep() failed");
         }
 }
 
+/**
+ * Literally just a mutex wrapper. Note that in Java we are using 
+ * `ReentrantLock` which is not quite the same as `PTHREAD_MUTEX_DEFAULT`, which
+ * is what we're using here. I believe that Java's `ReentrantLock` is much more 
+ * similar to a mutex of type `PTHREAD_MUTEX_RECURSIVE`.
+ */
 struct fork {
         pthread_mutex_t mtx;
 };
 
+/**
+ * A custom typedef just for readability. Lots of style guides say don't do 
+ * this... lots of style guides say do do this. Up to you. I prefer it.
+ */
 typedef void *(*pthread_routine_t)(void *);
 
+/**
+ * Construct a new `struct fork` with a valid mutex.
+ */
 struct fork fork_new()
 {
         struct fork this;
-        pthread_mutex_init(&this.mtx, NULL);
+        if (pthread_mutex_init(&this.mtx, NULL) != 0) {
+                // This is pretty much never going to happen. It's sort of like
+                // checking if malloc() fails... It feels like you ought to do 
+                // it in C, since it's UB otherwise but for little toy projects 
+                // you probably would be fine to let unsound code like this leak
+                // through.
+                PANIC("pthread_mutex_init() failed");
+        }
         return this;
 }
 
@@ -76,6 +101,8 @@ bool fork_pick_up(struct fork *restrict fork)
         switch (e) {
         case 0:
                 return true;
+        // As per the docs: The mutex could not be acquired because it was 
+        // already locked.
         case EBUSY:
                 return false;
         default:
@@ -87,13 +114,17 @@ bool fork_pick_up(struct fork *restrict fork)
 
 void fork_put_down(struct fork *restrict fork)
 {
-        pthread_mutex_unlock(&fork->mtx);
+        if (pthread_mutex_unlock(&fork->mtx) != 0) {
+                PANIC("pthread_mutex_unlock() failed");
+        }
 }
 
 struct philosopher {
         size_t id;
         struct fork *fork1;
         struct fork *fork2;
+        uint32_t thinking_count;
+        uint32_t eating_count;
 };
 
 void philosopher_announce(struct philosopher const *this, char const *msg)
@@ -101,6 +132,9 @@ void philosopher_announce(struct philosopher const *this, char const *msg)
         printf("Philosopher %zu %s\n", this->id, msg);
 }
 
+/**
+ * Get a random `int` in the range `min..=max`.
+ */
 int randrange(int min, int max)
 {
         return rand() % (max + 1 - min) + min;
@@ -112,23 +146,31 @@ void philosopher_act(struct philosopher const *this, char const *msg)
         millisleep(randrange(500, 3500));
 }
 
+/**
+ * This is equivalent to the `run()` method when we make something `Runnable`.
+ * Note that this also has a return value, but we return by assigning to some 
+ * memory location. You can think about the caching implications of all this.
+ * Mutexes need to be shared though, we can't really get over that.
+ */
 void *philosopher_routine(struct philosopher *this)
 {
-        uint32_t thinking_count = 0;
-        uint32_t eating_count = 0;
         while (true) {
                 philosopher_act(this, "is thinking...");
-                thinking_count++;
+                this->thinking_count++;
                 if (fork_pick_up(this->fork1)) {
                         philosopher_announce(this, "has picked up left fork.");
                 } else {
                         continue;
                 }
+
+                // I add this here just to make the whole deadlock thing a bit
+                // more apparent. If we don't have it, it's not as interesting.
                 philosopher_act(this, "is picking up right fork...");
+
                 if (fork_pick_up(this->fork2)) {
                         philosopher_announce(this, "has picked up right fork.");
                         philosopher_act(this, "is eating");
-                        eating_count++;
+                        this->eating_count++;
                         fork_put_down(this->fork1);
                         fork_put_down(this->fork2);
                 } else {
@@ -166,8 +208,9 @@ int main()
                         .id = i + 1,
                         .fork1 = &forks[i],
                         .fork2 = &forks[(i + 1) % SIZE],
+                        .eating_count = 0,
+                        .thinking_count = 0,
                 };
-                printf("create philosopher(%zu, %zu)\n", i, (i + 1) % SIZE);
         }
 
         pthread_t threads[5];
