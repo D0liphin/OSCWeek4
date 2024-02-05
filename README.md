@@ -51,3 +51,24 @@ have to install it manually [from here](https://gnuwin32.sourceforge.net/package
 
 If you're on some other esoteric operating system (like FreeBSD or 
 MacOS) you ought to figure it out for yourself.
+
+## What Kind of Style Is This?
+
+It's the same style that linux uses (I use the same `.clang-format`). 
+There are a few exceptions that make my life easier.
+
+1. 8-spaces instead of 8-width tabs
+2. Aligned comments
+3. Max-width of 100 characters for code and inline comments
+4. Max-width of 80 characters otherwise
+
+1, 3 and 4 are generally accepted for modern programming languages. 
+Though there is some contention about using 80-width comments instead of
+72... Aligned comments I just like. I don't really have an excuse. 
+
+```c
+int something = 5; // Here is a long description that spans over 
+                   // multiple comments. In the kernel style guide, this
+                   // is not allowed!
+int somethingelse = 6;
+```
