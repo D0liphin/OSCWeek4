@@ -15,52 +15,9 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <stdarg.h>
-// For whatever reason, my IDE doesn't pick up nanosleep(), so uncomment this if
-// you need.
-// int nanosleep(const struct timespec *req, struct timespec *_Nullable rem);
 #include <time.h>
-
-__attribute__((noinline)) __attribute__((cold)) __attribute__((noreturn)) void
-panic(int line_nr, char const *filename, char const *restrict format, ...)
-{
-#define STARS5 "*****"
-#define STARS10 STARS5 STARS5
-#define STARS35 STARS10 STARS10 STARS10 STARS5
-        va_list args;
-        va_start(args, format);
-        fprintf(stderr, "\e[0;31m" STARS35 "* panic! *" STARS35 "\e[0m\n");
-        fprintf(stderr, "panicked at %s:%d\n", filename, line_nr);
-        vfprintf(stderr, format, args);
-        fprintf(stderr, "\n");
-        va_end(args);
-        exit(EXIT_FAILURE);
-}
-
-#define PANIC(...) panic(__LINE__, __FILE__, __VA_ARGS__)
-
-struct timespec timespec_from_ms(long ms)
-{
-        struct timespec timespec;
-        timespec.tv_sec = ms / 1000;
-        timespec.tv_nsec = (ms - timespec.tv_sec * 1000) * 1000000;
-        return timespec;
-}
-
-/**
- * I wonder what this function does... 
- * 
- * Note that unlike Java, this function panics on interrupt. 
- */
-void millisleep(long ms)
-{
-        struct timespec ts = timespec_from_ms(ms);
-        if (nanosleep(&ts, NULL) != 0) {
-                // This shouldn't be EINVAL and is unlikely to be EFAULT, so it
-                // probably just means we got interrupted (which is also very
-                // unlikely).
-                PANIC("nanosleep() failed");
-        }
-}
+#include "../include/panic.h"
+#include "../include/millisleep.h"
 
 /**
  * Literally just a mutex wrapper. Note that in Java we are using 
